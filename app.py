@@ -38,7 +38,10 @@ except:
 
 client = gspread.authorize(creds)
 
-sheet = client.open("Skylark-Agent")
+sheet = client.open_by_url(
+    "https://docs.google.com/spreadsheets/d/1oGCzIXG-YESjQHBxZ_q7qEOuMR9CC2nAWywNGxD135w/edit?gid=1237425074#gid=1237425074"
+)
+
 
 pilot_sheet = sheet.worksheet("pilot_roster")
 drone_sheet = sheet.worksheet("drone_fleet")
