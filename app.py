@@ -2,46 +2,35 @@ import streamlit as st
 import pandas as pd
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-import time
 import json
+import time
 
-# --------------------------------------------------
-# PAGE CONFIG
-# --------------------------------------------------
-
+# ---------- PAGE CONFIG ----------
 st.set_page_config(
     page_title="Drone Operations Coordinator",
     layout="wide"
 )
 
-# --------------------------------------------------
-# GOOGLE SHEETS CONNECTION
-# --------------------------------------------------
+# ---------- GOOGLE SHEETS CONNECTION (FINAL CLOUD VERSION) ----------
 
 scope = [
     "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/drive"
 ]
 
-# ✅ CLOUD + LOCAL COMPATIBILITY
+# Load full JSON from Streamlit Secrets
+creds_info = json.loads(st.secrets["gcp_service_account"]["json"])
 
-try:
-    # Use Streamlit Cloud secrets
-    creds_dict = st.secrets["gcp_service_account"]
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(
-        creds_dict, scope)
-
-except:
-    # Fallback for local run
-    creds = ServiceAccountCredentials.from_json_keyfile_name(
-        "credentials.json", scope)
+creds = ServiceAccountCredentials.from_json_keyfile_dict(
+    creds_info, scope
+)
 
 client = gspread.authorize(creds)
 
-sheet = client.open_by_url(
-    "https://docs.google.com/spreadsheets/d/1oGCzIXG-YESjQHBxZ_q7qEOuMR9CC2nAWywNGxD135w/edit?gid=1237425074#gid=1237425074"
-)
+# 🔥 Your Spreadsheet ID
+SPREADSHEET_ID = "1oGCzIXG-YESjQHBxZ_q7qEOuMR9CC2nAWywNGxD135w"
 
+sheet = client.open_by_key(SPREADSHEET_ID)
 
 pilot_sheet = sheet.worksheet("pilot_roster")
 drone_sheet = sheet.worksheet("drone_fleet")
@@ -102,4 +91,129 @@ elif section == "Pilot Management":
             filtered = pilots[pilots["status"] == "Available"]
 
             if skill:
-                filter
+                filtered = filtered[
+                    filtered["skills"].str.contains(skill, case=False)
+                ]
+
+            if location:
+                filtered = filtered[
+                    filtered["location"].str.contains(location, case=False)
+                ]
+
+            st.dataframe(filtered)
+
+    st.subheader("Update Pilot Status")
+
+    name = st.text_input("Pilot Name")
+    status = st.selectbox(
+        "New Status",
+        ["Available", "Assigned", "On Leave", "Unavailable"]
+    )
+
+    if st.button("Update Status"):
+
+        with st.spinner("Updating status..."):
+            time.sleep(1)
+
+            try:
+                cell = pilot_sheet.find(name)
+                pilot_sheet.update_cell(cell.row, 6, status)
+                st.success("Status updated successfully.")
+                st.rerun()
+            except:
+                st.error("Pilot not found.")
+
+# =====================================================
+# DRONE INVENTORY
+# =====================================================
+
+elif section == "Drone Inventory":
+
+    st.title("Drone Inventory")
+
+    st.dataframe(drones)
+
+    st.subheader("Available Drones")
+
+    available = drones[drones["status"] == "Available"]
+    st.dataframe(available)
+
+    st.subheader("Maintenance Alerts")
+
+    maintenance = drones[drones["status"] == "Maintenance"]
+
+    if maintenance.empty:
+        st.success("No drones currently in maintenance.")
+    else:
+        st.warning("Maintenance issues detected.")
+        st.dataframe(maintenance)
+
+# =====================================================
+# MISSION ASSIGNMENT
+# =====================================================
+
+elif section == "Mission Assignment":
+
+    st.title("Mission Assignment")
+
+    mission_id = st.text_input("Mission ID")
+
+    if st.button("Recommend Assignment"):
+
+        with st.spinner("Analyzing mission requirements..."):
+            time.sleep(1)
+
+            mission = missions[missions["project_id"] == mission_id]
+
+            if not mission.empty:
+
+                mission = mission.iloc[0]
+
+                available_pilots = pilots[pilots["status"] == "Available"]
+
+                matched_pilots = available_pilots[
+                    available_pilots["skills"].str.contains(
+                        mission["required_skills"], case=False)
+                ]
+
+                available_drones = drones[drones["status"] == "Available"]
+
+                st.subheader("Recommended Pilots")
+                st.dataframe(matched_pilots)
+
+                st.subheader("Available Drones")
+                st.dataframe(available_drones)
+
+            else:
+                st.warning("Mission not found.")
+
+# =====================================================
+# URGENT REASSIGNMENT
+# =====================================================
+
+elif section == "Urgent Reassignment":
+
+    st.title("Urgent Reassignment")
+
+    project = st.text_input("Project ID")
+
+    if st.button("Find Replacement"):
+
+        with st.spinner("Searching for available resources..."):
+            time.sleep(1)
+
+            available_pilots = pilots[pilots["status"] == "Available"]
+            available_drones = drones[drones["status"] == "Available"]
+
+            if available_pilots.empty:
+                st.error("No pilots available.")
+
+            elif available_drones.empty:
+                st.error("No drones available.")
+
+            else:
+                st.subheader("Replacement Pilot")
+                st.dataframe(available_pilots.head(1))
+
+                st.subheader("Replacement Drone")
+                st.dataframe(available_drones.head(1))
