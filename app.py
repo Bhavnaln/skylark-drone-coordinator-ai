@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-import json
 import time
 
 # ---------- PAGE CONFIG ----------
@@ -18,11 +17,11 @@ scope = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-# Load full JSON from Streamlit Secrets
-creds_info = json.loads(st.secrets["gcp_service_account"]["json"])
+# ✅ Read credentials directly from Streamlit Secrets
+creds_dict = st.secrets["gcp_service_account"]
 
 creds = ServiceAccountCredentials.from_json_keyfile_dict(
-    creds_info, scope
+    creds_dict, scope
 )
 
 client = gspread.authorize(creds)
