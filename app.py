@@ -26,7 +26,7 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(
 
 client = gspread.authorize(creds)
 
-SPREADSHEET_ID = "1oco8CmRFKnJk4vLgQdxnQ2SqH_RaBdp_78mOnm4cgZU"
+SPREADSHEET_ID = "1oGCzIXG-YESjQHBxZ_q7qEOuMR9CC2nAWywNGxD135w"
 
 try:
     sheet = client.open_by_key(SPREADSHEET_ID)
