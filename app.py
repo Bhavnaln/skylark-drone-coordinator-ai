@@ -207,4 +207,3 @@ elif section == "Urgent Reassignment":
 
             st.subheader("Replacement Drone")
             st.dataframe(available_drones.head(1))
-
